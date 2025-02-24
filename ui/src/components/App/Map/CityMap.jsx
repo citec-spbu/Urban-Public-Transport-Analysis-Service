@@ -274,7 +274,7 @@ function CityMap({tramNodes, tramEdges, busNodes, busEdges, center, subwayEdges,
         return (
             <div>
                 <button className={styles.btn} onClick={toggleView}>Вернуться к карте</button>
-                <button className={styles.btn} onClick={handleSendDataButtonClick}>Посмотреть Законы власти</button>
+                <button className={styles.btn} onClick={handleSendDataButtonClick}>Посмотреть степенной закон</button>
                 {/*<button className={styles.btn} onClick={handleTestButtonClick}>testgetdata</button>*/}
                 {/* 直接输出返回的数据 */}
                 {/* 添加一个空的 div 作为间隔 */}
