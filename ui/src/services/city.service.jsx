@@ -34,5 +34,50 @@ export const cityService = {
     async userDb(positions) {
         const response = await axios.post('http://localhost:80/network/db', positions);
         return JSON.parse(response.data);
+    },
+    /*
+    async sendPowerData(data) {
+        try {
+            // 发送POST请求，并携带数据
+            const response = await axios.post('http://localhost:80/network/test', data);
+            // 直接使用response.data，不再需要JSON.parse
+            console.log('Server responded with:', response.data);
+            return response.data;  // 返回解析后的响应数据
+        } catch (error) {
+            console.error('Error sending data:', error.response ? error.response.data : error.message);
+            throw error; // 重新抛出异常以便上层处理
+        }
+    },*/
+    async sendPowerData(data) {
+        try {
+            // 发送POST请求，并携带数据，指定响应类型为blob以处理二进制数据（如图像）
+            const response = await axios.post('http://localhost:80/network/test', data, { responseType: 'blob' });
+    
+            // 打印响应头内容
+            console.log('Response Headers:', JSON.stringify(response.headers));
+    
+            // 打印响应数据的前几个字节，用于调试
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                console.log('First few bytes of response data:', reader.result.slice(0, 50)); // 打印前50个字节
+            };
+            reader.readAsText(new Blob([response.data], { type: 'text/plain' }).slice(0, 50));
+    
+            if (response.headers['content-type'] === 'image/png') {
+                const blob = new Blob([response.data], { type: 'image/png' });
+                const imageUrl = URL.createObjectURL(blob);
+                return imageUrl;
+            } else {
+                console.error('Unexpected content type:', response.headers['content-type']);
+                return null; // 或者其他适当的错误处理
+            }
+        } catch (error) {
+            console.error('Error sending data:', error.response ? error.response.data : error.message);
+            throw error; // 重新抛出异常以便上层处理
+        }
+    },
+    async test() {
+        const response = await axios.get('http://localhost:80/network/test');
+        return JSON.parse(response.data);
     }
 }

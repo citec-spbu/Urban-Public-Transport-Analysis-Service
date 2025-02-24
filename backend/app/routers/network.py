@@ -19,6 +19,7 @@ router = APIRouter(
 )
 
 
+
 async def filter_parameters(bus: bool = False, tram: bool = False, trolleybus: bool = False, subway: bool = False):
     result = []
 
@@ -534,10 +535,93 @@ async def read_graph(
     }
     return json.dumps(data)
 
-
 @router.get("/db/delete")
 async def delete_graph():
     """
     Удаляет граф из базы данных.
     """
     remove_graph(driver)
+
+@router.get("/test")
+async def get_test_string():
+    data = {"message": "Hello from backend!"}
+    return json.dumps(data)
+
+
+'''
+from fastapi import HTTPException
+import json
+
+
+@router.post("/test")
+async def post_test_data(data: dict):  # 修改为接受字典类型
+    """
+    处理POST请求，接收前端发送的数据并进行处理。
+    """
+    if not data:
+        raise HTTPException(status_code=400, detail="No data received")
+
+    features_list = data['nodes']['features']
+    center_count = [feature['properties']['center_count'] for feature in features_list]
+
+    # 返回响应给前端
+    return {"status": "success", "received_data": center_count}  # 直接返回数据
+'''
+from fastapi import HTTPException, Response
+import io
+import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
+
+# 幂律分布函数
+def power_law(x, alpha):
+    return x**(-alpha)
+
+# 绘制分布图和拟合结果的函数
+def plot_power_law(values, fit_params):
+    values = np.array(values)
+    # 对数据进行排序（如果未排序）
+    values_sorted = np.sort(values)
+    # 计算累积分布函数（CDF）的值，用于绘制
+    cdf_values = np.arange(1, len(values_sorted) + 1) / len(values_sorted)
+    # 绘制原始数据的CDF
+    plt.plot(values_sorted, cdf_values, 'o', label='Original Data CDF')
+    # 绘制拟合的幂律分布CDF（需要对PDF进行积分得到CDF的近似）
+    fit_x = np.linspace(min(values_sorted), max(values_sorted), 1000)
+    fit_y = (fit_x**(-fit_params[0])) / (fit_params[0] * min(values_sorted)**(1 - fit_params[0]))
+    fit_y_cdf = np.cumsum(fit_y) / np.sum(fit_y)  # 归一化积分得到CDF
+    plt.plot(fit_x, fit_y_cdf, '-', label=f'Power Law Fit: α={fit_params[0]:.2f}')
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.xlabel('PageRank')
+    plt.ylabel('Cumulative Distribution Function')
+    plt.legend()
+    plt.title('PageRank Distribution and Power Law Fit')
+
+    # 将图像保存到内存中而不是磁盘
+    img = io.BytesIO()
+    plt.savefig(img, format='png')
+    plt.close()  # 关闭图形，防止占用内存
+    img.seek(0)  # 回到开始位置
+    return img
+
+@router.post("/test")
+async def post_test_data(data: dict):  # 修改为接受字典类型
+    """
+    处理POST请求，接收前端发送的数据并进行处理。
+    """
+    if not data or 'nodes' not in data:
+        raise HTTPException(status_code=400, detail="No valid data received")
+
+    features_list = data['nodes']['features']
+    pagerank = [feature['properties']['pagerank'] for feature in features_list]
+
+    if len(pagerank) == 0:
+        raise HTTPException(status_code=400, detail="No pagerank data available")
+
+    # 拟合幂律分布
+    params, _ = curve_fit(power_law, np.arange(1, len(pagerank) + 1), sorted(pagerank, reverse=True), p0=[1])
+
+    # 生成图像
+    image = plot_power_law(pagerank, params)
+
+    return Response(content=image.getvalue(), media_type="image/png")
